@@ -1,0 +1,42 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - my_network
+
+  ml:
+    # image: ml:latest # Optional but useful
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest # ECR image pulled in CI/CD workflow
+    container_name: ml_service # Optional for fixed container name
+    restart: always
+    environment:
+      MONGO_DB_URL_KEY: ${MONGO_DB_URL_KEY}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_DB_COLLECTION: ${MONGO_DB_COLLECTION}
+      AWS_ACCESS_KEY_ID_ENV_KEY: ${AWS_ACCESS_KEY_ID_ENV_KEY}
+      AWS_SECRET_ACCESS_KEY_ENV_KEY: ${AWS_SECRET_ACCESS_KEY_ENV_KEY}
+      AWS_REGION_NAME: ${AWS_REGION_NAME}
+      APP_HOST: ${APP_HOST}
+      APP_PORT: ${APP_PORT}
+
+    ports:
+      - 4060:4060
+    depends_on:
+      - mongodb
+    networks:
+      - my_network
+
+volumes:
+  mongo_data:
+
+networks:
+  my_network:

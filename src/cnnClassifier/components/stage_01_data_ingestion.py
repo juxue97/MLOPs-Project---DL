@@ -9,10 +9,12 @@ class DataIngestion:
     def __init__(self):
         pass
 
-    def initiate() -> DataIngestionArtifact:
+    def initiate(self) -> DataIngestionArtifact:
         try:
             logging.info("Initiating Data Ingestion Pipeline")
+            dataIngestionArtifact = DataIngestionArtifact()
 
-            return DataIngestionArtifact()
+            return dataIngestionArtifact
+
         except Exception as e:
             raise CNNClassifierException(e, sys) from e

@@ -75,7 +75,13 @@ class ModelPreparation:
 
     def _update_base_model(self) -> None:
         try:
-            fullModel = self._prepare_full_model()
+            fullModel = self._prepare_full_model(
+                model=self.model,
+                classes=self.modelPreparationConfigs.params_classes,
+                freezeAll=True,
+                freezeTill=None,
+                learningRate=self.modelPreparationConfigs.params_learning_rate,
+            )
 
             self._save_model(
                 path=self.modelPreparationConfigs.updated_base_model_path, model=fullModel

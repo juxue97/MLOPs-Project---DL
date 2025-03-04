@@ -52,7 +52,26 @@ class ConfigurationManager:
     def get_model_training_configs(self) -> ModelTrainingConfigs:
         modelTrainingConfigs = self.config.model_training
         baseModelConfigs = self.config.model_preparation
-        trainingDataPath = os.path.join(
-            self.config.data_ingestion.unzip_data_dir, modelTrainingConfigs.dataset_filename)
+        trainDataPath = os.path.join(
+            self.config.data_ingestion.unzip_data_dir, modelTrainingConfigs.train_dataset_filename)
+        testDataPath = os.path.join(
+            self.config.data_ingestion.unzip_data_dir, modelTrainingConfigs.test_dataset_filename)
+        validDataPath = os.path.join(
+            self.config.data_ingestion.unzip_data_dir, modelTrainingConfigs.valid_dataset_filename)
 
         create_directories([modelTrainingConfigs.root_dir])
+
+        model_training_configs = ModelTrainingConfigs(
+            root_dir=modelTrainingConfigs.root_dir,
+            trained_model_path=modelTrainingConfigs.trained_model_path,
+            updated_base_model_path=baseModelConfigs.updated_base_model_path,
+            train_data=trainDataPath,
+            test_data=testDataPath,
+            valid_data=validDataPath,
+            params_epochs=self.params.EPOCHS,
+            params_batch_size=self.params.BATCH_SIZE,
+            params_is_augmentation=self.params.AUGMENTATION,
+            params_image_size=self.params.IMAGE_SIZE,
+        )
+
+        return model_training_configs

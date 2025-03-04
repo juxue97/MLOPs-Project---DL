@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from typing import Optional
 
 import tensorflow as tf
 
@@ -38,11 +39,13 @@ class ModelPreparation:
     @staticmethod
     def _prepare_full_model(model: tf.keras.Model,
                             classes: int,
-                            freezeAll: int,
-                            freezeTill: int,
+                            freezeAll: Optional[bool],
+                            freezeTill: Optional[int],
                             learningRate: float
                             ) -> tf.keras.Model:
         try:
+            logging.info("Model Preparation Pipeline: prepare full model")
+
             if freezeAll:
                 for layers in model.layers:
                     model.trainable = False
@@ -75,6 +78,8 @@ class ModelPreparation:
 
     def _update_base_model(self) -> None:
         try:
+            logging.info("Model Preparation Pipeline: update base model")
+
             fullModel = self._prepare_full_model(
                 model=self.model,
                 classes=self.modelPreparationConfigs.params_classes,

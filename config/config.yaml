@@ -2,7 +2,7 @@ artifacts_root: artifacts
 
 data_ingestion:
   root_dir: artifacts/data_ingestion
-  dataset_URI: https://drive.google.com/file/d/1Mhpio2hV7UxUeFo19mtQfnctVEEvgT1L/view?usp=sharing
+  dataset_URI: https://drive.google.com/file/d/1IqrM5MtNoMUtUnbS-sKJkY3hg8NySz20/view?usp=sharing
   zip_data_file: artifacts/data_ingestion/data.zip
   unzip_data_dir: artifacts/data_ingestion
 
@@ -14,4 +14,6 @@ model_preparation:
 model_training:
   root_dir: artifacts/training
   trained_model_path: artifacts/training/model.h5
-  dataset_filename: face emotion data
+  train_dataset_filename: train
+  test_dataset_filename: test
+  valid_dataset_filename: valid

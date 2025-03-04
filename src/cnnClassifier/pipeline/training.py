@@ -13,7 +13,7 @@ class TrainPipeline:
 
         self.dataIngestionConfig = configurationManager.get_data_ingestion_configs()
         self.modelPreparationConfigs = configurationManager.get_model_preparation_configs()
-        # self.modelTrainingConfigs = configurationManager.get_model_training_configs()
+        self.modelTrainingConfigs = configurationManager.get_model_training_configs()
 
     def _start_data_ingestion(self) -> None:
         try:
@@ -55,7 +55,7 @@ class TrainPipeline:
             logging.info("Starting Training Pipeline")
             self._start_data_ingestion()
             self._start_model_preparation()
-            # self._start_model_training()
+            self._start_model_training()
 
             logging.info("Done Training Pipeline")
 

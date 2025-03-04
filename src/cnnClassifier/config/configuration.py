@@ -40,10 +40,6 @@ class ConfigurationManager:
             root_dir=modelPreparationConfigs.root_dir,
             base_model_path=modelPreparationConfigs.base_model_path,
             updated_base_model_path=modelPreparationConfigs.updated_base_model_path,
-            params_image_size=self.params.IMAGE_SIZE,
-            params_learning_rate=self.params.LEARNING_RATE,
-            params_include_top=self.params.INCLUDE_TOP,
-            params_weights=self.params.WEIGHTS,
             params_classes=self.params.CLASSES,
         )
 
@@ -72,6 +68,7 @@ class ConfigurationManager:
             params_batch_size=self.params.BATCH_SIZE,
             params_is_augmentation=self.params.AUGMENTATION,
             params_image_size=self.params.IMAGE_SIZE,
+            params_learning_rate=self.params.LEARNING_RATE
         )
 
         return model_training_configs

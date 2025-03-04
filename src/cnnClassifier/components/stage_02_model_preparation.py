@@ -2,7 +2,9 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-import tensorflow as tf
+import torch
+import torch.nn as nn
+import torchvision
 
 from cnnClassifier.entity.config import ModelPreparationConfigs
 from cnnClassifier.exception import CNNClassifierException
@@ -17,17 +19,16 @@ class ModelPreparation:
             raise CNNClassifierException(e, sys)
 
     @staticmethod
-    def _save_model(path: Path, model: tf.keras.Model) -> None:
-        model.save(path)
+    def _save_model(path: Path, model: nn.Module) -> None:
+        torch.save(model, path)
 
     def _download_base_model(self) -> None:
         try:
             logging.info("Model Preparation Pipeline: download base model")
-            self.model = tf.keras.applications.vgg16.VGG16(
-                include_top=self.modelPreparationConfigs.params_include_top,
-                weights=self.modelPreparationConfigs.params_weights,
-                input_shape=self.modelPreparationConfigs.params_image_size,
-            )
+
+            self.model = torchvision.models.vgg16(pretrained=True)
+
+            self.model.avgpool = nn.AdaptiveAvgPool2d((7, 7))
 
             self._save_model(
                 path=self.modelPreparationConfigs.base_model_path, model=self.model
@@ -37,41 +38,33 @@ class ModelPreparation:
             raise CNNClassifierException(e, sys)
 
     @staticmethod
-    def _prepare_full_model(model: tf.keras.Model,
+    def _prepare_full_model(model: nn.Module,
                             classes: int,
                             freezeAll: Optional[bool],
                             freezeTill: Optional[int],
-                            learningRate: float
-                            ) -> tf.keras.Model:
+                            ) -> nn.Module:
         try:
             logging.info("Model Preparation Pipeline: prepare full model")
 
             if freezeAll:
-                for layers in model.layers:
-                    model.trainable = False
+                for param in model.parameters():
+                    param.requires_grad = False
+
             elif (freezeTill is not None) and (freezeTill > 0):
-                for layer in model.layers[:-freezeTill]:
-                    model.trainable = False
+                for param in list(model.parameters())[:-freezeTill]:
+                    param.requires_grad = False
 
-            flatten = tf.keras.layers.Flatten()(model.output)
-            prediction = tf.keras.layers.Dense(
-                units=classes,
-                activation="softmax"
-            )(flatten)
-
-            fullModel = tf.keras.models.Model(
-                inputs=model.input,
-                outputs=prediction,
+            model.classifier = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(25088, 4096),
+                nn.ReLU(),
+                nn.Dropout(0.5),
+                nn.Linear(4096, classes),
+                nn.Softmax(dim=1)
             )
 
-            fullModel.compile(
-                optimizer=tf.keras.optimizers.Adam(learning_rate=learningRate),
-                loss=tf.keras.losses.CategoricalCrossentropy(),
-                metrics=["accuracy"],
-            )
-
-            fullModel.summary()
-            return fullModel
+            logging.info(model)
+            return model
 
         except Exception as e:
             raise CNNClassifierException(e, sys)
@@ -85,7 +78,6 @@ class ModelPreparation:
                 classes=self.modelPreparationConfigs.params_classes,
                 freezeAll=True,
                 freezeTill=None,
-                learningRate=self.modelPreparationConfigs.params_learning_rate,
             )
 
             self._save_model(

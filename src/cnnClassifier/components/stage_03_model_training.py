@@ -1,7 +1,11 @@
 from pathlib import Path
 import sys
-
-import tensorflow as tf
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from torchvision import transforms, datasets
+from tqdm import tqdm
 
 from cnnClassifier.entity.config import ModelTrainingConfigs
 from cnnClassifier.exception import CNNClassifierException
@@ -11,24 +15,30 @@ from cnnClassifier.logger import logging
 class ModelTraining:
     def __init__(self, modelTrainingConfigs: ModelTrainingConfigs):
         try:
+            self.device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu"
+            )
             self.modelTrainingConfigs = modelTrainingConfigs
 
         except Exception as e:
             raise CNNClassifierException(e, sys)
 
     @staticmethod
-    def save_model(path: Path, model: tf.keras.Model):
+    def save_model(path: Path, model: nn.Module):
         logging.info(
             f"Model Training Pipeline: saving trained model to path {path}")
 
-        model.save(path)
+        torch.save(model, path)
 
-    def _get_base_model(self) -> tf.keras.Model:
+    def _get_base_model(self) -> nn.Module:
         try:
             logging.info("Model Training Pipeline: get base model")
-            model = tf.keras.models.load_model(
-                filepath=self.modelTrainingConfigs.updated_base_model_path
+            model = torch.load(
+                self.modelTrainingConfigs.updated_base_model_path,
+                weights_only=False,
             )
+            model.to(self.device)
+
             return model
 
         except Exception as e:
@@ -36,57 +46,51 @@ class ModelTraining:
 
     def _train_valid_generator(self):
         try:
-            logging.info("Model Training Pipeline: create training generator")
+            logging.info(
+                "Model Training Pipeline: create training and validation dataloaders")
 
-            dataGeneratorKwargs = dict(rescale=1.0 / 255)
+            # Define image transformations
+            transform_train = transforms.Compose([
+                transforms.Resize(
+                    self.modelTrainingConfigs.params_image_size[:-1]),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(40),
+                transforms.RandomAffine(
+                    degrees=0, shear=0.2, scale=(0.8, 1.2)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            ]) if self.modelTrainingConfigs.params_is_augmentation else transforms.Compose([
+                transforms.Resize(
+                    self.modelTrainingConfigs.params_image_size[:-1]),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            ])
 
-            dataFlowKwargs = dict(
-                target_size=self.modelTrainingConfigs.params_image_size[:-1],
-                batch_size=self.modelTrainingConfigs.params_batch_size,
-                interpolation="bilinear",
-            )
+            transform_valid = transforms.Compose([
+                transforms.Resize(
+                    self.modelTrainingConfigs.params_image_size[:-1]),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            ])
 
-            # Training Data Generator
-            if self.modelTrainingConfigs.params_is_augmentation:
-                trainDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator(
-                    rotation_range=40,
-                    horizontal_flip=True,
-                    width_shift_range=0.2,
-                    height_shift_range=0.2,
-                    shear_range=0.2,
-                    zoom_range=0.2,
-                    **dataGeneratorKwargs,
-                )
-            else:
-                trainDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator(
-                    **dataGeneratorKwargs,
-                )
+            # Load datasets
+            train_dataset = datasets.ImageFolder(
+                root=self.modelTrainingConfigs.train_data, transform=transform_train)
+            valid_dataset = datasets.ImageFolder(
+                root=self.modelTrainingConfigs.valid_data, transform=transform_valid)
+            test_dataset = datasets.ImageFolder(
+                root=self.modelTrainingConfigs.test_data, transform=transform_valid)
 
-            self.trainGenerator = trainDataGenerator.flow_from_directory(
-                directory=self.modelTrainingConfigs.train_data,
-                # subset="training", # only use if dataset is not pre-separated
-                shuffle=True,
-                **dataFlowKwargs,
-            )
-
-            # Validation & Test Data Generator
-            validDataGenerator = tf.keras.preprocessing.image.ImageDataGenerator(
-                **dataGeneratorKwargs
-            )
-
-            self.validGenerator = validDataGenerator.flow_from_directory(
-                directory=self.modelTrainingConfigs.valid_data,
-                # subset="validation", # only use if dataset is not pre-separated
-                shuffle=False,
-                **dataFlowKwargs,
-            )
-
-            # Test Data Generator (Optional - if needed for evaluation)
-            self.testGenerator = validDataGenerator.flow_from_directory(
-                directory=self.modelTrainingConfigs.test_data,
-                shuffle=False,
-                **dataFlowKwargs,
-            )
+            # Create DataLoader
+            self.trainLoader = DataLoader(
+                train_dataset, batch_size=self.modelTrainingConfigs.params_batch_size, shuffle=True)
+            self.validLoader = DataLoader(
+                valid_dataset, batch_size=self.modelTrainingConfigs.params_batch_size, shuffle=False)
+            self.testLoader = DataLoader(
+                test_dataset, batch_size=self.modelTrainingConfigs.params_batch_size, shuffle=False)
 
         except Exception as e:
             raise CNNClassifierException(e, sys)
@@ -94,16 +98,63 @@ class ModelTraining:
     def _train_model(self):
         try:
             logging.info("Model Training Pipeline: train model")
-            stepsPerEpoch = self.trainGenerator.samples // self.trainGenerator.batch_size
-            validation_steps = self.validGenerator.samples // self.validGenerator.batch_size
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(self.model.parameters(
+            ), lr=self.modelTrainingConfigs.params_learning_rate)
 
-            self.model.fit(
-                self.trainGenerator,
-                epochs=self.modelTrainingConfigs.params_epochs,
-                steps_per_epoch=stepsPerEpoch,
-                validation_steps=validation_steps,
-                validation_data=self.validGenerator,
-            )
+            for epoch in range(self.modelTrainingConfigs.params_epochs):
+                logging.info(
+                    f"Epoch {epoch + 1}/{self.modelTrainingConfigs.params_epochs}")
+
+                # Training phase
+                self.model.train()
+                total_loss = 0
+                correct = 0
+                total = 0
+
+                progress_bar = tqdm(
+                    self.trainLoader, desc=f"Training Epoch {epoch+1}", unit="batch")
+
+                for images, labels in progress_bar:
+                    images, labels = images.to(
+                        self.device), labels.to(self.device)
+
+                    optimizer.zero_grad()
+                    outputs = self.model(images)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
+
+                    total_loss += loss.item()
+                    _, predicted = torch.max(outputs, 1)
+                    correct += (predicted == labels).sum().item()
+                    total += labels.size(0)
+
+                    progress_bar.set_postfix(
+                        loss=total_loss / (total / self.modelTrainingConfigs.params_batch_size))
+
+                train_accuracy = 100 * correct / total
+                logging.info(
+                    f"Training Loss: {total_loss:.4f} | Training Accuracy: {train_accuracy:.2f}%")
+
+                # Validation phase
+                self.model.eval()
+                correct = 0
+                total = 0
+                progress_bar = tqdm(
+                    self.validLoader, desc=f"Validating Epoch {epoch+1}", unit="batch")
+
+                with torch.no_grad():
+                    for images, labels in progress_bar:
+                        images, labels = images.to(
+                            self.device), labels.to(self.device)
+                        outputs = self.model(images)
+                        _, predicted = torch.max(outputs, 1)
+                        correct += (predicted == labels).sum().item()
+                        total += labels.size(0)
+
+                valid_accuracy = 100 * correct / total
+                logging.info(f"Validation Accuracy: {valid_accuracy:.2f}%")
 
         except Exception as e:
             raise CNNClassifierException(e, sys)

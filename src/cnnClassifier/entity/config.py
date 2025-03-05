@@ -41,3 +41,8 @@ class ModelEvaluationConfigs:
     mlflow_uri: str
     all_params: dict
     score_file_path: Path
+
+
+@dataclass(frozen=True)
+class PredictionConfigs:
+    path_to_model: Path

@@ -1,7 +1,7 @@
 import os
 
 from cnnClassifier.constants import *
-from cnnClassifier.entity.config import DataIngestionConfigs, ModelEvaluationConfigs, ModelPreparationConfigs, ModelTrainingConfigs
+from cnnClassifier.entity.config import DataIngestionConfigs, ModelEvaluationConfigs, ModelPreparationConfigs, ModelTrainingConfigs, PredictionConfigs
 from cnnClassifier.utils.main_utils import create_directories, read_yaml
 
 
@@ -87,3 +87,8 @@ class ConfigurationManager:
             score_file_path=Path(modelEvaluationConfigs.score_file_path),
         )
         return eval_config
+
+    def get_prediction_configs(self) -> PredictionConfigs:
+        return PredictionConfigs(
+            path_to_model=self.config.model_training.trained_model_path
+        )

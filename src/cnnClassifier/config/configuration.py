@@ -1,7 +1,5 @@
 import os
 
-from box import ConfigBox
-
 from cnnClassifier.constants import *
 from cnnClassifier.entity.config import DataIngestionConfigs, ModelEvaluationConfigs, ModelPreparationConfigs, ModelTrainingConfigs
 from cnnClassifier.utils.main_utils import create_directories, read_yaml
@@ -84,7 +82,7 @@ class ConfigurationManager:
         eval_config = ModelEvaluationConfigs(
             path_of_model=modelTrainingConfigs.trained_model_path,
             validation_data=validDataPath,
-            mlflow_uri=modelEvaluationConfigs.mlflow_uri,
+            mlflow_uri=MLFLOW_URI,
             all_params=self.params,
             score_file_path=Path(modelEvaluationConfigs.score_file_path),
         )

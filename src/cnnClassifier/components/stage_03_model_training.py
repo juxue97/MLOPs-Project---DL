@@ -140,7 +140,8 @@ class ModelTraining:
 
                     progress_bar.set_postfix(
                         loss=total_loss / (len(self.trainLoader)))
-                    break
+
+                    break  # remove this line for prod
 
                 train_accuracy = 100 * correct / total
                 logging.info(

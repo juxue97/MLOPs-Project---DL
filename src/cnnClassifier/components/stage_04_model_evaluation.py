@@ -1,3 +1,6 @@
+from cnnClassifier.exception import CNNClassifierException
+from cnnClassifier.logger import logging
+from cnnClassifier.entity.config import ModelEvaluationConfigs
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -9,11 +12,10 @@ from torchvision import transforms, datasets
 import mlflow
 import mlflow.pytorch
 from tqdm import tqdm
-
-
-from cnnClassifier.entity.config import ModelEvaluationConfigs
-from cnnClassifier.logger import logging
-from cnnClassifier.exception import CNNClassifierException
+import dagshub
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning,
+                        module="mlflow.utils.requirements_utils")
 
 
 class ModelEvaluation:
@@ -82,7 +84,8 @@ class ModelEvaluation:
 
                     progress_bar.set_postfix(
                         loss=total_loss / i, accuracy=100 * correct / total)
-                    break
+
+                    break  # remove this line for prod
 
             avg_loss = total_loss / len(self.valid_loader)
             accuracy = 100 * correct / total
@@ -107,9 +110,13 @@ class ModelEvaluation:
 
     def log_into_mlflow(self):
         try:
+            dagshub.init(repo_owner='juxue97',
+                         repo_name='MLOPs-Project---DL', mlflow=True)
+
             logging.info(
                 "Model Evaluation Pipeline: log metrics, model, params onto mlflow")
-            mlflow.set_registry_uri(self.config.mlflow_uri)
+
+            mlflow.set_registry_uri(self.modelEvaluationConfig.mlflow_uri)
             tracking_url_type_store = urlparse(
                 mlflow.get_tracking_uri()).scheme
 

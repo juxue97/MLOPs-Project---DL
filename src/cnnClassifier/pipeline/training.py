@@ -71,7 +71,7 @@ class TrainPipeline:
             self._start_data_ingestion()
             self._start_model_preparation()
             self._start_model_training()
-            self._start_model_evaluation(log=False)
+            self._start_model_evaluation(log=True)
 
             logging.info("Done Training Pipeline")
 

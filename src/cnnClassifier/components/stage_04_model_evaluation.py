@@ -1,6 +1,8 @@
-from cnnClassifier.exception import CNNClassifierException
-from cnnClassifier.logger import logging
+from cnnClassifier.constants import MLFLOW_TRACKING_PASSWORD, MLFLOW_TRACKING_USERNAME
 from cnnClassifier.entity.config import ModelEvaluationConfigs
+from cnnClassifier.logger import logging
+from cnnClassifier.exception import CNNClassifierException
+import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -14,8 +16,7 @@ import mlflow.pytorch
 from tqdm import tqdm
 import dagshub
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning,
-                        module="mlflow.utils.requirements_utils")
+warnings.filterwarnings("ignore")
 
 
 class ModelEvaluation:
@@ -85,7 +86,7 @@ class ModelEvaluation:
                     progress_bar.set_postfix(
                         loss=total_loss / i, accuracy=100 * correct / total)
 
-                    break  # remove this line for prod
+                    break  # remove this line for prod/fulltraining
 
             avg_loss = total_loss / len(self.valid_loader)
             accuracy = 100 * correct / total
@@ -113,8 +114,12 @@ class ModelEvaluation:
             dagshub.init(repo_owner='juxue97',
                          repo_name='MLOPs-Project---DL', mlflow=True)
 
+            os.environ["MLFLOW_TRACKING_USERNAME"] = MLFLOW_TRACKING_USERNAME
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = MLFLOW_TRACKING_PASSWORD
+
             logging.info(
                 "Model Evaluation Pipeline: log metrics, model, params onto mlflow")
+            logging.getLogger("mlflow").setLevel(logging.ERROR)
 
             mlflow.set_registry_uri(self.modelEvaluationConfig.mlflow_uri)
             tracking_url_type_store = urlparse(

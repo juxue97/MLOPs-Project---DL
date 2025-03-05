@@ -102,12 +102,13 @@ class ModelTraining:
             optimizer = optim.Adam(self.model.parameters(
             ), lr=self.modelTrainingConfigs.params_learning_rate)
 
+            # Set to training phase
+            self.model.train()
+
             for epoch in range(self.modelTrainingConfigs.params_epochs):
                 logging.info(
                     f"Epoch {epoch + 1}/{self.modelTrainingConfigs.params_epochs}")
 
-                # Training phase
-                self.model.train()
                 total_loss = 0
                 correct = 0
                 total = 0
@@ -116,45 +117,34 @@ class ModelTraining:
                     self.trainLoader, desc=f"Training Epoch {epoch+1}", unit="batch")
 
                 for images, labels in progress_bar:
+                    # move data into device
                     images, labels = images.to(
                         self.device), labels.to(self.device)
 
-                    optimizer.zero_grad()
+                    # forward
                     outputs = self.model(images)
                     loss = criterion(outputs, labels)
+
+                    # backward
+                    optimizer.zero_grad()
                     loss.backward()
+
+                    # gradient descent
                     optimizer.step()
 
+                    # generate metrics for progress bar to show total loss
                     total_loss += loss.item()
                     _, predicted = torch.max(outputs, 1)
                     correct += (predicted == labels).sum().item()
                     total += labels.size(0)
 
                     progress_bar.set_postfix(
-                        loss=total_loss / (total / self.modelTrainingConfigs.params_batch_size))
+                        loss=total_loss / (len(self.trainLoader)))
+                    break
 
                 train_accuracy = 100 * correct / total
                 logging.info(
                     f"Training Loss: {total_loss:.4f} | Training Accuracy: {train_accuracy:.2f}%")
-
-                # Validation phase
-                self.model.eval()
-                correct = 0
-                total = 0
-                progress_bar = tqdm(
-                    self.validLoader, desc=f"Validating Epoch {epoch+1}", unit="batch")
-
-                with torch.no_grad():
-                    for images, labels in progress_bar:
-                        images, labels = images.to(
-                            self.device), labels.to(self.device)
-                        outputs = self.model(images)
-                        _, predicted = torch.max(outputs, 1)
-                        correct += (predicted == labels).sum().item()
-                        total += labels.size(0)
-
-                valid_accuracy = 100 * correct / total
-                logging.info(f"Validation Accuracy: {valid_accuracy:.2f}%")
 
         except Exception as e:
             raise CNNClassifierException(e, sys)

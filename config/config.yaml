@@ -17,3 +17,7 @@ model_training:
   train_dataset_filename: train
   test_dataset_filename: test
   valid_dataset_filename: valid
+
+model_evaluation:
+  mlflow_uri: https://dagshub.com/entbappy/chest-Disease-Classification-MLflow-DVC.mlflow
+  score_file_path: artifacts/evaluation/scores.json

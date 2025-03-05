@@ -3,7 +3,7 @@ import os
 from box import ConfigBox
 
 from cnnClassifier.constants import *
-from cnnClassifier.entity.config import DataIngestionConfigs, ModelPreparationConfigs, ModelTrainingConfigs
+from cnnClassifier.entity.config import DataIngestionConfigs, ModelEvaluationConfigs, ModelPreparationConfigs, ModelTrainingConfigs
 from cnnClassifier.utils.main_utils import create_directories, read_yaml
 
 
@@ -41,6 +41,7 @@ class ConfigurationManager:
             base_model_path=modelPreparationConfigs.base_model_path,
             updated_base_model_path=modelPreparationConfigs.updated_base_model_path,
             params_classes=self.params.CLASSES,
+            params_image_size=self.params.IMAGE_SIZE,
         )
 
         return model_preparation_config
@@ -72,3 +73,19 @@ class ConfigurationManager:
         )
 
         return model_training_configs
+
+    def get_model_evaluation_configs(self) -> ModelEvaluationConfigs:
+        modelEvaluationConfigs = self.config.model_evaluation
+
+        modelTrainingConfigs = self.config.model_training
+        validDataPath = os.path.join(
+            self.config.data_ingestion.unzip_data_dir, modelTrainingConfigs.valid_dataset_filename)
+
+        eval_config = ModelEvaluationConfigs(
+            path_of_model=modelTrainingConfigs.trained_model_path,
+            validation_data=validDataPath,
+            mlflow_uri=modelEvaluationConfigs.mlflow_uri,
+            all_params=self.params,
+            score_file_path=Path(modelEvaluationConfigs.score_file_path),
+        )
+        return eval_config

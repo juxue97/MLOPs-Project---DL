@@ -16,6 +16,7 @@ class ModelPreparationConfigs:
     base_model_path: Path
     updated_base_model_path: Path
     params_classes: int
+    params_image_size: list
 
 
 @dataclass(frozen=True)
@@ -31,3 +32,12 @@ class ModelTrainingConfigs:
     params_is_augmentation: bool
     params_image_size: list
     params_learning_rate: float
+
+
+@dataclass(frozen=True)
+class ModelEvaluationConfigs:
+    path_of_model: Path
+    validation_data: Path
+    mlflow_uri: str
+    all_params: dict
+    score_file_path: Path

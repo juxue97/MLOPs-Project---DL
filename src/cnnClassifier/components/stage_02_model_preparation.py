@@ -1,6 +1,6 @@
 from pathlib import Path
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
@@ -12,6 +12,8 @@ from cnnClassifier.logger import logging
 
 
 class ModelPreparation:
+    outputCnnDimension = (7, 7)
+
     def __init__(self, modelPreparationConfigs: ModelPreparationConfigs):
         try:
             self.modelPreparationConfigs = modelPreparationConfigs
@@ -26,9 +28,12 @@ class ModelPreparation:
         try:
             logging.info("Model Preparation Pipeline: download base model")
 
-            self.model = torchvision.models.vgg16(pretrained=True)
+            self.model = torchvision.models.vgg16(
+                weights=torchvision.models.VGG16_Weights.IMAGENET1K_V1
+            )
 
-            self.model.avgpool = nn.AdaptiveAvgPool2d((7, 7))
+            # this ensure the final size of the cnn layer will always be 7x7, regardless of size of input image
+            self.model.avgpool = nn.AdaptiveAvgPool2d(self.outputCnnDimension)
 
             self._save_model(
                 path=self.modelPreparationConfigs.base_model_path, model=self.model
@@ -42,6 +47,7 @@ class ModelPreparation:
                             classes: int,
                             freezeAll: Optional[bool],
                             freezeTill: Optional[int],
+                            outputCnnDimension: int,
                             ) -> nn.Module:
         try:
             logging.info("Model Preparation Pipeline: prepare full model")
@@ -56,7 +62,7 @@ class ModelPreparation:
 
             model.classifier = nn.Sequential(
                 nn.Flatten(),
-                nn.Linear(25088, 4096),
+                nn.Linear(outputCnnDimension, 4096),
                 nn.ReLU(),
                 nn.Dropout(0.5),
                 nn.Linear(4096, classes),
@@ -72,12 +78,15 @@ class ModelPreparation:
     def _update_base_model(self) -> None:
         try:
             logging.info("Model Preparation Pipeline: update base model")
+            outputCnnDimension = self.outputCnnDimension[0] * \
+                self.outputCnnDimension[1] * 512
 
             fullModel = self._prepare_full_model(
                 model=self.model,
                 classes=self.modelPreparationConfigs.params_classes,
                 freezeAll=True,
                 freezeTill=None,
+                outputCnnDimension=outputCnnDimension,
             )
 
             self._save_model(

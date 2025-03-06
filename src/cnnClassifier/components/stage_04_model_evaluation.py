@@ -1,7 +1,7 @@
-from cnnClassifier.constants import MLFLOW_TRACKING_PASSWORD, MLFLOW_TRACKING_USERNAME
-from cnnClassifier.entity.config import ModelEvaluationConfigs
-from cnnClassifier.logger import logging
 from cnnClassifier.exception import CNNClassifierException
+from cnnClassifier.logger import logging
+from cnnClassifier.entity.config import ModelEvaluationConfigs
+from cnnClassifier.constants import MLFLOW_TRACKING_PASSWORD, MLFLOW_TRACKING_USERNAME
 import os
 import sys
 from pathlib import Path

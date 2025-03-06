@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.router import routerPred
+from server.router import routerPred, routerTrain
 
 app = FastAPI()
 
@@ -25,3 +25,4 @@ async def health_check():
         raise Exception(f"Error starting http server : {e}")
 
 app.include_router(routerPred)
+app.include_router(routerTrain)

@@ -7,6 +7,8 @@ from torchvision import transforms
 import mlflow
 import mlflow.pytorch
 from mlflow.tracking import MlflowClient
+from torch.types import Number
+
 
 from cnnClassifier.constants import MLFLOW_URI
 from cnnClassifier.exception import CNNClassifierException
@@ -82,7 +84,16 @@ class PredictPipeline:
         pass
 
     @staticmethod
-    def start(image: Image) -> dict:
+    def mapping(value: Number) -> str:
+        classStr = ""
+        classes = ["anger", "disgust", "fear", "happiness",
+                   "neutrality", "sadness", "suprise"]
+        if value <= len(classes):
+            classStr = classes[int(value)]
+
+        return classStr
+
+    def start(self, image: Image) -> dict:
         """Run inference and log to MLflow"""
         try:
             model = ModelLoader.load_model()  # Ensure model is loaded
@@ -93,6 +104,7 @@ class PredictPipeline:
             with torch.no_grad():
                 output = model(image_tensor)
                 prediction = torch.argmax(output, dim=1).item()
+                classLabel = self.mapping(prediction)
             latency = time.time() - start_time
 
             # Log inference to MLflow
@@ -101,7 +113,7 @@ class PredictPipeline:
                 mlflow.log_metric("inference_time", latency)
                 mlflow.log_metric("prediction", prediction)
 
-            return {"prediction": prediction, "latency": latency}
+            return {"prediction": prediction, "label": classLabel, "latency": latency}
 
         except Exception as e:
             raise CNNClassifierException(e, sys) from e
